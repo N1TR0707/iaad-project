@@ -307,6 +307,63 @@ class EmailService {
 
     return await this.sendEmail(process.env.ADMIN_EMAIL, subject, html, 'admin_notification');
   }
+
+  async sendTestEmail(email) {
+    const subject = '🧪 Test Email - IAAD-PROJECT';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .success-box { background: #e8f5e9; padding: 20px; border-left: 4px solid #4caf50; margin: 20px 0; border-radius: 5px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🧪 Test Email</h1>
+          </div>
+          <div class="content">
+            <div class="success-box">
+              <h2 style="margin-top: 0; color: #4caf50;">✅ SMTP Configuration Berhasil!</h2>
+              <p>Jika Anda menerima email ini, berarti konfigurasi SMTP sudah benar dan email notifikasi akan berfungsi dengan baik.</p>
+            </div>
+            
+            <h3>📧 Email Service Information:</h3>
+            <ul>
+              <li><strong>SMTP Host:</strong> ${process.env.EMAIL_HOST}</li>
+              <li><strong>Port:</strong> ${process.env.EMAIL_PORT}</li>
+              <li><strong>From:</strong> ${process.env.EMAIL_FROM}</li>
+              <li><strong>Test Time:</strong> ${new Date().toLocaleString('id-ID')}</li>
+            </ul>
+
+            <h3>🔔 Notifikasi yang Akan Otomatis Terkirim:</h3>
+            <ul>
+              <li>✅ Welcome email saat registrasi</li>
+              <li>📦 Konfirmasi aktivasi produk</li>
+              <li>⏰ Reminder garansi (30 hari & 7 hari sebelum expired)</li>
+              <li>🎫 Update status claim garansi</li>
+              <li>👨‍💼 Notifikasi admin untuk aktivasi baru</li>
+            </ul>
+
+            <p><strong>Cron Job:</strong> Berjalan otomatis setiap hari jam 09:00 pagi untuk cek garansi yang akan expired.</p>
+          </div>
+          <div class="footer">
+            <p>IAAD-PROJECT Warranty Management System</p>
+            <p>Email ini dikirim secara otomatis untuk testing purpose.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await this.sendEmail(email, subject, html, 'test');
+  }
 }
 
 module.exports = new EmailService();
