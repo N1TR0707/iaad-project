@@ -13,6 +13,9 @@ const CronService = require('./services/cronService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy (required for Cloudflare Tunnel, nginx, etc.)
+app.set('trust proxy', true);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
