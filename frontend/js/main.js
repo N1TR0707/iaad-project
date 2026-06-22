@@ -7,7 +7,7 @@ const API_BASE = '/api';
 function checkAuth() {
   const token = localStorage.getItem('token');
   if (!token) {
-    window.location.href = '/public/login.html';
+    window.location.href = '/login.html';
     return false;
   }
   return true;
@@ -27,7 +27,7 @@ function checkAdminAuth() {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  window.location.href = '/public/login.html';
+  window.location.href = '/login.html';
 }
 
 // Logout admin

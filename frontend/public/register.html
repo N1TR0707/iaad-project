@@ -45,11 +45,11 @@
       </form>
       
       <div class="auth-link">
-        Sudah punya akun? <a href="/public/login.html">Login di sini</a>
+        Sudah punya akun? <a href="/login.html">Login di sini</a>
       </div>
       
       <div class="auth-link" style="margin-top: 1.5rem;">
-        <a href="/public/index.html">← Kembali ke Beranda</a>
+        <a href="/">← Kembali ke Beranda</a>
       </div>
     </div>
   </div>
@@ -101,7 +101,7 @@
           
           showAlert('Registrasi berhasil! Mengalihkan...', 'success');
           setTimeout(() => {
-            window.location.href = '/public/dashboard.html';
+            window.location.href = '/dashboard.html';
           }, 1500);
         } else {
           showAlert(data.error || 'Registrasi gagal', 'error');

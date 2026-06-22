@@ -30,11 +30,11 @@
       </form>
       
       <div class="auth-link">
-        Belum punya akun? <a href="/public/register.html">Daftar di sini</a>
+        Belum punya akun? <a href="/register.html">Daftar di sini</a>
       </div>
       
       <div class="auth-link" style="margin-top: 1.5rem;">
-        <a href="/public/index.html">← Kembali ke Beranda</a>
+        <a href="/">← Kembali ke Beranda</a>
       </div>
     </div>
   </div>
@@ -47,7 +47,7 @@
   <script>
     // Check if already logged in
     if (localStorage.getItem('token')) {
-      window.location.href = '/public/dashboard.html';
+      window.location.href = '/dashboard.html';
     }
 
     const form = document.getElementById('loginForm');
@@ -82,7 +82,7 @@
           
           showAlert('Login berhasil! Mengalihkan...', 'success');
           setTimeout(() => {
-            window.location.href = '/public/dashboard.html';
+            window.location.href = '/dashboard.html';
           }, 1000);
         } else {
           showAlert(data.error || 'Login gagal', 'error');

@@ -30,14 +30,11 @@ app.use('/api/claim', claimRoutes);
 // Serve static files (frontend)
 app.use('/css', express.static(path.join(__dirname, '../frontend/css')));
 app.use('/js', express.static(path.join(__dirname, '../frontend/js')));
-app.use('/public', express.static(path.join(__dirname, '../frontend/public')));
 app.use('/admin', express.static(path.join(__dirname, '../frontend/admin')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Serve uploaded files
 
-// Root endpoint - serve landing page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
-});
+// Serve public portal at root (serves index.html automatically)
+app.use(express.static(path.join(__dirname, '../frontend/public')));
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
