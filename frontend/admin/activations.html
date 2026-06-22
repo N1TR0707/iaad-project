@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daftar Aktivasi - IAAD-PROJECT Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <h1>📋 Daftar Aktivasi</h1>
+            <p>Semua aktivasi garansi yang telah dilakukan</p>
+          </div>
+          <button onclick="exportData()" class="btn btn-success">
+            📥 Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <!-- Filters -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="form-input" 
+            placeholder="Cari berdasarkan nama, email, atau serial..."
+            style="flex: 1; min-width: 250px;"
+          >
+          <select id="statusFilter" class="form-select" style="min-width: 150px;">
+            <option value="">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="expired">Expired</option>
+          </select>
+          <button onclick="loadActivations()" class="btn btn-primary">
+            🔍 Filter
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingSection" style="text-align: center; padding: 3rem;">
+          <div class="loading" style="margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--gray);">Memuat data aktivasi...</p>
+        </div>
+
+        <!-- Table -->
+        <div id="tableSection" class="hidden">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Produk</th>
+                  <th>Serial Number</th>
+                  <th>Tanggal Aktivasi</th>
+                  <th>Garansi Berakhir</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="activationsTableBody">
+              </tbody>
+            </table>
+          </div>
+
+          <div id="pagination" class="flex justify-between align-center mt-2">
+            <div id="paginationInfo"></div>
+            <div class="flex gap-1">
+              <button id="prevBtn" class="btn btn-primary" style="padding: 8px 16px;">
+                ← Prev
+              </button>
+              <button id="nextBtn" class="btn btn-primary" style="padding: 8px 16px;">
+                Next →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+          <h3 style="color: var(--gray);">Belum Ada Aktivasi</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    checkAdminAuth();
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    let currentPage = 1;
+    let allActivations = [];
+
+    // Load activations on page load
+    loadActivations();
+
+    async function loadActivations() {
+      const loadingSection = document.getElementById('loadingSection');
+      const tableSection = document.getElementById('tableSection');
+      const emptyState = document.getElementById('emptyState');
+
+      loadingSection.classList.remove('hidden');
+      tableSection.classList.add('hidden');
+      emptyState.classList.add('hidden');
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch(`/api/admin/activations?page=${currentPage}&limit=50`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          allActivations = data.activations;
+          
+          if (allActivations.length === 0) {
+            emptyState.classList.remove('hidden');
+          } else {
+            displayActivations(allActivations);
+            tableSection.classList.remove('hidden');
+          }
+        } else {
+          alert('Gagal memuat data aktivasi');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan saat memuat data');
+      } finally {
+        loadingSection.classList.add('hidden');
+      }
+    }
+
+    function displayActivations(activations) {
+      const tbody = document.getElementById('activationsTableBody');
+      tbody.innerHTML = '';
+
+      // Apply filters
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      let filtered = activations.filter(a => {
+        const matchSearch = !searchTerm || 
+          a.user_nama.toLowerCase().includes(searchTerm) ||
+          a.email.toLowerCase().includes(searchTerm) ||
+          a.serial_code.toLowerCase().includes(searchTerm);
+        
+        const matchStatus = !statusFilter || a.status === statusFilter;
+        
+        return matchSearch && matchStatus;
+      });
+
+      filtered.forEach(activation => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${activation.id}</td>
+          <td>${activation.user_nama}</td>
+          <td>${activation.email}</td>
+          <td>${activation.product_nama}</td>
+          <td style="font-family: 'Courier New', monospace;">${activation.serial_code}</td>
+          <td>${formatDate(activation.activated_at)}</td>
+          <td>${formatDate(activation.warranty_expired_at)}</td>
+          <td>
+            ${activation.status === 'active' 
+              ? '<span class="badge badge-success">Aktif</span>' 
+              : '<span class="badge badge-danger">Expired</span>'}
+            ${activation.days_remaining > 0 && activation.days_remaining <= 30 
+              ? `<br><small style="color: var(--warning);">${activation.days_remaining} hari lagi</small>` 
+              : ''}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.getElementById('paginationInfo').textContent = 
+        `Menampilkan ${filtered.length} dari ${activations.length} aktivasi`;
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    function exportData() {
+      const token = localStorage.getItem('adminToken');
+      window.open(`/api/admin/activations/export?token=${token}`, '_blank');
+    }
+
+    // Search handler
+    document.getElementById('searchInput').addEventListener('input', () => {
+      displayActivations(allActivations);
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', () => {
+      displayActivations(allActivations);
+    });
+  </script>
+</body>
+</html>

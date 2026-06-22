@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Serial Numbers - IAAD-PROJECT Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <h1>🔢 Kelola Serial Numbers</h1>
+            <p>Lihat, edit, dan hapus serial numbers</p>
+          </div>
+          <a href="/admin/generate-serial.html" class="btn btn-primary">
+            ➕ Generate Serial Baru
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <!-- Filters -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="form-input" 
+            placeholder="Cari serial number..."
+            style="flex: 1; min-width: 250px;"
+          >
+          <select id="statusFilter" class="form-select" style="min-width: 150px;">
+            <option value="">Semua Status</option>
+            <option value="available">Available</option>
+            <option value="used">Used</option>
+          </select>
+          <select id="productFilter" class="form-select" style="min-width: 200px;">
+            <option value="">Semua Produk</option>
+          </select>
+          <button onclick="loadSerials()" class="btn btn-primary">
+            🔍 Filter
+          </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" style="margin-bottom: 2rem;">
+          <div class="stat-card">
+            <div class="stat-number" id="totalCount">0</div>
+            <div class="stat-label">Total Serial</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-number" id="availableCount">0</div>
+            <div class="stat-label">Available</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-number" id="usedCount">0</div>
+            <div class="stat-label">Used</div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingSection" style="text-align: center; padding: 3rem;">
+          <div class="loading" style="margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--gray);">Memuat serial numbers...</p>
+        </div>
+
+        <!-- Table -->
+        <div id="tableSection" class="hidden">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Serial Code</th>
+                  <th>Produk</th>
+                  <th>Kategori</th>
+                  <th>Status</th>
+                  <th>Generated</th>
+                  <th>Activated</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="serialsTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+          <h3 style="color: var(--gray);">Belum Ada Serial Numbers</h3>
+          <a href="/admin/generate-serial.html" class="btn btn-primary" style="margin-top: 1rem;">
+            Generate Serial Numbers
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Status Modal -->
+  <div id="editModal" class="modal hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: 2rem;">
+      <div class="card-header">✏️ Edit Status Serial</div>
+      
+      <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--light); border-radius: 5px;">
+        <p><strong>Serial Code:</strong> <span id="modalSerialCode" style="font-family: 'Courier New', monospace;"></span></p>
+        <p><strong>Produk:</strong> <span id="modalProduct"></span></p>
+      </div>
+
+      <form id="editForm">
+        <input type="hidden" id="serialId">
+        
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="status" class="form-select" required>
+            <option value="available">✅ Available (Belum digunakan)</option>
+            <option value="used">🔒 Used (Sudah digunakan)</option>
+          </select>
+          <small style="color: var(--warning);">⚠️ Hati-hati mengubah status!</small>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            💾 Update Status
+          </button>
+          <button type="button" onclick="closeEditModal()" class="btn" style="flex: 1; background: var(--gray); color: white;">
+            ❌ Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: 2rem;">
+      <div class="card-header" style="color: var(--danger);">⚠️ Konfirmasi Hapus</div>
+      
+      <p style="margin-bottom: 1rem;">Apakah Anda yakin ingin menghapus serial number ini?</p>
+      <div style="padding: 1rem; background: var(--light); border-radius: 5px; margin-bottom: 1rem;">
+        <p style="font-family: 'Courier New', monospace; font-size: 1.1rem; font-weight: bold;" id="deleteSerialCode"></p>
+      </div>
+      <p style="color: var(--danger); margin-bottom: 1.5rem;">
+        <strong>Perhatian:</strong> Aksi ini tidak bisa dibatalkan!<br>
+        Serial number yang sudah digunakan tidak bisa dihapus.
+      </p>
+
+      <div style="display: flex; gap: 1rem;">
+        <button onclick="confirmDelete()" class="btn btn-danger" style="flex: 1;">
+          🗑️ Ya, Hapus
+        </button>
+        <button onclick="closeDeleteModal()" class="btn" style="flex: 1; background: var(--gray); color: white;">
+          Batal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    checkAdminAuth();
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    let allSerials = [];
+    let deleteSerialId = null;
+
+    // Load data
+    loadProducts();
+    loadSerials();
+
+    async function loadSerials() {
+      const loadingSection = document.getElementById('loadingSection');
+      const tableSection = document.getElementById('tableSection');
+      const emptyState = document.getElementById('emptyState');
+
+      loadingSection.classList.remove('hidden');
+      tableSection.classList.add('hidden');
+      emptyState.classList.add('hidden');
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/serials?limit=500', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          allSerials = data.serials;
+          
+          if (allSerials.length === 0) {
+            emptyState.classList.remove('hidden');
+          } else {
+            updateStats(allSerials);
+            displaySerials(allSerials);
+            tableSection.classList.remove('hidden');
+          }
+        } else {
+          alert('Gagal memuat data serial numbers');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan saat memuat data');
+      } finally {
+        loadingSection.classList.add('hidden');
+      }
+    }
+
+    function updateStats(serials) {
+      const total = serials.length;
+      const available = serials.filter(s => s.status === 'available').length;
+      const used = serials.filter(s => s.status === 'used').length;
+
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('availableCount').textContent = available;
+      document.getElementById('usedCount').textContent = used;
+    }
+
+    function displaySerials(serials) {
+      const tbody = document.getElementById('serialsTableBody');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const productFilter = document.getElementById('productFilter').value;
+
+      // Apply filters
+      let filtered = serials.filter(s => {
+        const matchSearch = !searchTerm || s.serial_code.toLowerCase().includes(searchTerm);
+        const matchStatus = !statusFilter || s.status === statusFilter;
+        const matchProduct = !productFilter || s.product_id == productFilter;
+        return matchSearch && matchStatus && matchProduct;
+      });
+
+      tbody.innerHTML = '';
+
+      filtered.forEach(serial => {
+        const row = document.createElement('tr');
+        
+        const statusBadge = serial.status === 'available'
+          ? '<span class="badge badge-success">✅ Available</span>'
+          : '<span class="badge badge-warning">🔒 Used</span>';
+
+        row.innerHTML = `
+          <td>${serial.id}</td>
+          <td style="font-family: 'Courier New', monospace; font-weight: bold; color: var(--primary);">${serial.serial_code}</td>
+          <td>${serial.product_nama || '-'}</td>
+          <td>${serial.kategori || '-'}</td>
+          <td>${statusBadge}</td>
+          <td>${formatDateShort(serial.generated_at)}</td>
+          <td>${serial.activated_at ? formatDateShort(serial.activated_at) : '-'}</td>
+          <td>
+            <button onclick="editSerial(${serial.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; margin-right: 5px;">
+              ✏️ Edit
+            </button>
+            <button onclick="deleteSerial(${serial.id})" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.85rem;" ${serial.status === 'used' ? 'disabled title="Serial sudah digunakan"' : ''}>
+              🗑️ Hapus
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editSerial(id) {
+      const serial = allSerials.find(s => s.id === id);
+      if (!serial) return;
+
+      document.getElementById('serialId').value = id;
+      document.getElementById('modalSerialCode').textContent = serial.serial_code;
+      document.getElementById('modalProduct').textContent = serial.product_nama;
+      document.getElementById('status').value = serial.status;
+      
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function deleteSerial(id) {
+      const serial = allSerials.find(s => s.id === id);
+      if (!serial) return;
+
+      if (serial.status === 'used') {
+        alert('Serial number sudah digunakan, tidak bisa dihapus!');
+        return;
+      }
+
+      deleteSerialId = id;
+      document.getElementById('deleteSerialCode').textContent = serial.serial_code;
+      document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').style.display = 'none';
+      deleteSerialId = null;
+    }
+
+    // Edit form submit
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const serialId = document.getElementById('serialId').value;
+      const status = document.getElementById('status').value;
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch(`/api/admin/serials/${serialId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Status serial number berhasil diupdate!');
+          closeEditModal();
+          loadSerials();
+        } else {
+          alert(data.error || 'Gagal update status');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan. Coba lagi nanti.');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    async function confirmDelete() {
+      if (!deleteSerialId) return;
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch(`/api/admin/serials/${deleteSerialId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Serial number berhasil dihapus!');
+          closeDeleteModal();
+          loadSerials();
+        } else {
+          alert(data.error || 'Gagal menghapus serial number');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan. Coba lagi nanti.');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Search & filter handlers
+    document.getElementById('searchInput').addEventListener('input', () => {
+      displaySerials(allSerials);
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', () => {
+      displaySerials(allSerials);
+    });
+
+    document.getElementById('productFilter').addEventListener('change', () => {
+      displaySerials(allSerials);
+    });
+  </script>
+</body>
+</html>

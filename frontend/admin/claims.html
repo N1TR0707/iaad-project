@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Klaim Garansi - IAAD-PROJECT Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <h1>🔧 Kelola Klaim Garansi</h1>
+            <p>Tinjau dan proses klaim garansi dari pelanggan</p>
+          </div>
+          <button onclick="exportData()" class="btn btn-success">
+            📥 Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsSection">
+        <div class="stat-card warning">
+          <div class="stat-number" id="pendingCount">0</div>
+          <div class="stat-label">Menunggu</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #2196f3;">
+          <div class="stat-number" id="inProgressCount">0</div>
+          <div class="stat-label">Diproses</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-number" id="completedCount">0</div>
+          <div class="stat-label">Selesai</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-number" id="rejectedCount">0</div>
+          <div class="stat-label">Ditolak</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <!-- Filters -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="form-input" 
+            placeholder="Cari berdasarkan nama, email, produk..."
+            style="flex: 1; min-width: 250px;"
+          >
+          <select id="statusFilter" class="form-select" style="min-width: 150px;">
+            <option value="">Semua Status</option>
+            <option value="pending">Menunggu</option>
+            <option value="in_progress">Diproses</option>
+            <option value="completed">Selesai</option>
+            <option value="rejected">Ditolak</option>
+          </select>
+          <button onclick="loadClaims()" class="btn btn-primary">
+            🔍 Filter
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingSection" style="text-align: center; padding: 3rem;">
+          <div class="loading" style="margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--gray);">Memuat data klaim...</p>
+        </div>
+
+        <!-- Table -->
+        <div id="tableSection" class="hidden">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>User</th>
+                  <th>Produk</th>
+                  <th>Serial</th>
+                  <th>Kerusakan</th>
+                  <th>Foto</th>
+                  <th>Tanggal</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="claimsTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+          <h3 style="color: var(--gray);">Belum Ada Klaim</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Status Modal -->
+  <div id="updateModal" class="modal hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 600px; width: 90%; margin: 2rem;">
+      <div class="card-header">✏️ Update Status Klaim</div>
+      
+      <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--light); border-radius: 5px;">
+        <p><strong>User:</strong> <span id="modalUserName"></span></p>
+        <p><strong>Produk:</strong> <span id="modalProductName"></span></p>
+        <p><strong>Kerusakan:</strong> <span id="modalIssue"></span></p>
+        <div id="modalPhotoSection" class="hidden" style="margin-top: 1rem;">
+          <!-- Media will be inserted here dynamically -->
+        </div>
+      </div>
+
+      <form id="updateForm">
+        <input type="hidden" id="claimId">
+        
+        <div class="form-group">
+          <label class="form-label">Status *</label>
+          <select id="status" class="form-select" required>
+            <option value="pending">⏳ Menunggu</option>
+            <option value="in_progress">🔧 Diproses</option>
+            <option value="completed">✅ Selesai</option>
+            <option value="rejected">❌ Ditolak</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Catatan Admin (Opsional)</label>
+          <textarea id="adminNotes" class="form-input" rows="4" placeholder="Tambahkan catatan untuk customer..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nomor Resi (Tracking Number)</label>
+          <input type="text" id="trackingNumber" class="form-input" placeholder="Contoh: JNE123456789">
+          <small style="color: var(--gray);">Isi jika produk dikirim kembali ke customer</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Kurir</label>
+          <input type="text" id="courierName" class="form-input" placeholder="Contoh: JNE, J&T, Sicepat, dll">
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            💾 Update Status
+          </button>
+          <button type="button" onclick="closeModal()" class="btn" style="flex: 1; background: var(--gray); color: white;">
+            ❌ Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    checkAdminAuth();
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    let allClaims = [];
+    let currentClaimId = null;
+
+    // Load claims and stats
+    loadClaimsStats();
+    loadClaims();
+
+    async function loadClaimsStats() {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.claims) {
+          document.getElementById('pendingCount').textContent = data.claims.pending;
+          document.getElementById('inProgressCount').textContent = data.claims.in_progress;
+          document.getElementById('completedCount').textContent = data.claims.completed;
+          document.getElementById('rejectedCount').textContent = data.claims.rejected;
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    async function loadClaims() {
+      const loadingSection = document.getElementById('loadingSection');
+      const tableSection = document.getElementById('tableSection');
+      const emptyState = document.getElementById('emptyState');
+
+      loadingSection.classList.remove('hidden');
+      tableSection.classList.add('hidden');
+      emptyState.classList.add('hidden');
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const statusFilter = document.getElementById('statusFilter').value;
+        const url = statusFilter 
+          ? `/api/admin/claims?status=${statusFilter}&limit=100`
+          : '/api/admin/claims?limit=100';
+
+        const response = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          allClaims = data.claims;
+          
+          if (allClaims.length === 0) {
+            emptyState.classList.remove('hidden');
+          } else {
+            displayClaims(allClaims);
+            tableSection.classList.remove('hidden');
+          }
+        } else {
+          alert('Gagal memuat data klaim');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan saat memuat data');
+      } finally {
+        loadingSection.classList.add('hidden');
+      }
+    }
+
+    function displayClaims(claims) {
+      const tbody = document.getElementById('claimsTableBody');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+      // Apply search filter
+      let filtered = claims.filter(c => {
+        return !searchTerm || 
+          c.user_nama.toLowerCase().includes(searchTerm) ||
+          c.user_email.toLowerCase().includes(searchTerm) ||
+          c.product_nama.toLowerCase().includes(searchTerm) ||
+          c.serial_code.toLowerCase().includes(searchTerm) ||
+          c.issue_description.toLowerCase().includes(searchTerm);
+      });
+
+      tbody.innerHTML = '';
+
+      filtered.forEach(claim => {
+        const row = document.createElement('tr');
+        const statusBadge = getStatusBadge(claim.status);
+        
+        // Handle multiple media files
+        let mediaCell = '-';
+        if (claim.photo_path) {
+          const mediaPaths = claim.photo_path.split(',');
+          if (mediaPaths.length > 0 && mediaPaths[0]) {
+            mediaCell = mediaPaths.map((path, idx) => {
+              const ext = path.split('.').pop().toLowerCase();
+              const isVideo = ['mp4', 'mov', 'avi', 'wmv', 'webm', 'flv', 'mkv'].includes(ext);
+              const icon = isVideo ? '🎥' : '📷';
+              return `<a href="${path}" target="_blank" style="color: var(--primary); margin-right: 5px;">${icon}${idx + 1}</a>`;
+            }).join('');
+          }
+        }
+        
+        row.innerHTML = `
+          <td>${claim.id}</td>
+          <td>
+            <strong>${claim.user_nama}</strong><br>
+            <small style="color: var(--gray);">${claim.user_email}</small>
+          </td>
+          <td>${claim.product_nama}</td>
+          <td style="font-family: 'Courier New', monospace; font-size: 0.85rem;">${claim.serial_code}</td>
+          <td style="max-width: 200px;">${claim.issue_description}</td>
+          <td>${mediaCell}</td>
+          <td>${formatDateShort(claim.reported_at)}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button onclick="updateClaimStatus(${claim.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">
+              ✏️ Update
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        'pending': '<span class="badge badge-warning">⏳ Menunggu</span>',
+        'in_progress': '<span class="badge" style="background: #2196f3; color: white;">🔧 Diproses</span>',
+        'completed': '<span class="badge badge-success">✅ Selesai</span>',
+        'rejected': '<span class="badge badge-danger">❌ Ditolak</span>'
+      };
+      return badges[status] || status;
+    }
+
+    function updateClaimStatus(claimId) {
+      const claim = allClaims.find(c => c.id === claimId);
+      if (!claim) return;
+
+      currentClaimId = claimId;
+      document.getElementById('claimId').value = claimId;
+      document.getElementById('modalUserName').textContent = claim.user_nama;
+      document.getElementById('modalProductName').textContent = claim.product_nama;
+      document.getElementById('modalIssue').textContent = claim.issue_description;
+      
+      // Show media files if available
+      if (claim.photo_path) {
+        const mediaPaths = claim.photo_path.split(',');
+        const mediaContainer = document.getElementById('modalPhotoSection');
+        mediaContainer.innerHTML = '<p><strong>Foto/Video Kerusakan:</strong></p>';
+        
+        const mediaGrid = document.createElement('div');
+        mediaGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;';
+        
+        mediaPaths.forEach((path, idx) => {
+          if (!path.trim()) return;
+          
+          const ext = path.split('.').pop().toLowerCase();
+          const isVideo = ['mp4', 'mov', 'avi', 'wmv', 'webm', 'flv', 'mkv'].includes(ext);
+          
+          const mediaItem = document.createElement('div');
+          mediaItem.style.cssText = 'border: 2px solid var(--border); border-radius: 5px; overflow: hidden;';
+          
+          if (isVideo) {
+            const video = document.createElement('video');
+            video.src = path;
+            video.controls = true;
+            video.style.cssText = 'width: 100%; height: 150px; object-fit: cover;';
+            mediaItem.appendChild(video);
+          } else {
+            const link = document.createElement('a');
+            link.href = path;
+            link.target = '_blank';
+            const img = document.createElement('img');
+            img.src = path;
+            img.style.cssText = 'width: 100%; height: 150px; object-fit: cover; cursor: pointer;';
+            link.appendChild(img);
+            mediaItem.appendChild(link);
+          }
+          
+          const label = document.createElement('div');
+          label.textContent = isVideo ? `🎥 Video ${idx + 1}` : `📷 Foto ${idx + 1}`;
+          label.style.cssText = 'padding: 5px; text-align: center; background: var(--light); font-size: 0.85rem;';
+          mediaItem.appendChild(label);
+          
+          mediaGrid.appendChild(mediaItem);
+        });
+        
+        mediaContainer.appendChild(mediaGrid);
+        mediaContainer.classList.remove('hidden');
+      } else {
+        document.getElementById('modalPhotoSection').classList.add('hidden');
+      }
+      
+      document.getElementById('status').value = claim.status;
+      document.getElementById('adminNotes').value = claim.admin_notes || '';
+      document.getElementById('trackingNumber').value = claim.tracking_number || '';
+      document.getElementById('courierName').value = claim.courier_name || '';
+      
+      document.getElementById('updateModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('updateModal').style.display = 'none';
+      currentClaimId = null;
+    }
+
+    // Form submit
+    document.getElementById('updateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const claimId = document.getElementById('claimId').value;
+      const status = document.getElementById('status').value;
+      const adminNotes = document.getElementById('adminNotes').value.trim();
+      const trackingNumber = document.getElementById('trackingNumber').value.trim();
+      const courierName = document.getElementById('courierName').value.trim();
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch(`/api/admin/claims/${claimId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            status, 
+            adminNotes,
+            trackingNumber,
+            courierName
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Status klaim berhasil diupdate!');
+          closeModal();
+          loadClaimsStats();
+          loadClaims();
+        } else {
+          alert(data.error || 'Gagal update status klaim');
+        }
+      } catch (error) {
+        alert('Terjadi kesalahan. Coba lagi nanti.');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    // Search handler
+    document.getElementById('searchInput').addEventListener('input', () => {
+      displayClaims(allClaims);
+    });
+
+    function exportData() {
+      const token = localStorage.getItem('adminToken');
+      window.open(`/api/admin/claims/export?token=${token}`, '_blank');
+    }
+  </script>
+</body>
+</html>

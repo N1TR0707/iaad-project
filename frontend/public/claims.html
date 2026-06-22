@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klaim Garansi - IAAD-PROJECT</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🛡️ IAAD-PROJECT</a>
+      <ul class="navbar-menu">
+        <li><a href="/public/dashboard.html">Dashboard</a></li>
+        <li><a href="/public/activate.html">Aktivasi Produk</a></li>
+        <li><a href="/public/claims.html">Klaim Garansi</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>🔧 Klaim Garansi</h1>
+        <p>Ajukan klaim untuk produk yang mengalami kerusakan</p>
+      </div>
+
+      <!-- Submit Claim Section -->
+      <div style="max-width: 800px; margin: 0 auto;">
+        <div class="card">
+          <div class="card-header">➕ Ajukan Klaim Baru</div>
+          
+          <div id="alert" class="hidden"></div>
+
+          <form id="claimForm">
+            <div class="form-group">
+              <label class="form-label">Pilih Produk yang Ingin Diklaim *</label>
+              <select id="activationId" class="form-select" required>
+                <option value="">-- Memuat produk Anda... --</option>
+              </select>
+              <small style="color: var(--gray);">Hanya produk dengan garansi aktif yang bisa diklaim</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Deskripsi Kerusakan *</label>
+              <textarea 
+                id="issueDescription" 
+                class="form-input" 
+                rows="5" 
+                placeholder="Jelaskan kerusakan yang terjadi. Contoh: Kipas tidak menyala, Layar bergaris, Tidak bisa dinyalakan, dll."
+                required
+              ></textarea>
+              <small style="color: var(--gray);">Jelaskan sedetail mungkin agar kami bisa membantu lebih baik</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Foto/Video Kerusakan (Opsional)</label>
+              <input 
+                type="file" 
+                id="photos" 
+                class="form-input" 
+                accept="image/*,video/*"
+                multiple
+              >
+              <small style="color: var(--gray);">
+                📷 Upload foto/video kerusakan (Max 5 file, 50MB per file)<br>
+                Format: JPG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM
+              </small>
+              <div id="mediaPreview" class="hidden" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              📝 Ajukan Klaim
+            </button>
+          </form>
+        </div>
+
+        <!-- Info Box -->
+        <div class="card" style="background: #e3f2fd; border-left: 4px solid var(--primary);">
+          <h4 style="margin-bottom: 1rem;">ℹ️ Informasi Klaim Garansi:</h4>
+          <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">
+            <li>Klaim hanya dapat diajukan untuk produk dengan garansi yang masih aktif</li>
+            <li>Jelaskan kerusakan sedetail mungkin untuk mempercepat proses</li>
+            <li>Tim kami akan meninjau klaim Anda dalam 1-2 hari kerja</li>
+            <li>Anda akan menerima update status klaim melalui email</li>
+            <li>Cek status klaim Anda di bagian "Riwayat Klaim" di bawah</li>
+          </ul>
+        </div>
+
+        <!-- Claims History -->
+        <div class="card">
+          <div class="card-header">📋 Riwayat Klaim Saya</div>
+          
+          <div id="loadingClaims" style="text-align: center; padding: 2rem;">
+            <div class="loading" style="margin: 0 auto;"></div>
+            <p style="margin-top: 1rem; color: var(--gray);">Memuat riwayat klaim...</p>
+          </div>
+
+          <div id="noClaims" class="hidden" style="text-align: center; padding: 3rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+            <p style="color: var(--gray);">Belum ada klaim yang diajukan</p>
+          </div>
+
+          <div id="claimsList" class="hidden">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Produk</th>
+                    <th>Serial Number</th>
+                    <th>Kerusakan</th>
+                    <th>Foto</th>
+                    <th>Tanggal</th>
+                    <th>Status</th>
+                    <th>Catatan Admin</th>
+                    <th>Tracking</th>
+                  </tr>
+                </thead>
+                <tbody id="claimsTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script>
+    // Check authentication
+    checkAuth();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logout();
+    });
+
+    let activeActivations = [];
+
+    // Load active activations and claims
+    loadActiveActivations();
+    loadMyClaims();
+
+    async function loadActiveActivations() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/activation/my-activations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Filter only active warranties
+          activeActivations = data.activations.filter(a => !a.is_expired);
+          
+          const select = document.getElementById('activationId');
+          select.innerHTML = '';
+
+          if (activeActivations.length === 0) {
+            select.innerHTML = '<option value="">Tidak ada produk dengan garansi aktif</option>';
+            document.getElementById('claimForm').querySelector('button[type="submit"]').disabled = true;
+          } else {
+            select.innerHTML = '<option value="">-- Pilih Produk --</option>';
+            activeActivations.forEach(a => {
+              const option = document.createElement('option');
+              option.value = a.id;
+              option.textContent = `${a.product_nama} (${a.serial_code}) - Sisa ${a.days_remaining} hari`;
+              select.appendChild(option);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading activations:', error);
+        showAlert('Gagal memuat data produk', 'error');
+      }
+    }
+
+    async function loadMyClaims() {
+      const loadingClaims = document.getElementById('loadingClaims');
+      const noClaims = document.getElementById('noClaims');
+      const claimsList = document.getElementById('claimsList');
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/claim/my-claims', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        loadingClaims.classList.add('hidden');
+
+        if (data.claims.length === 0) {
+          noClaims.classList.remove('hidden');
+        } else {
+          displayClaims(data.claims);
+          claimsList.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Error loading claims:', error);
+        loadingClaims.innerHTML = '<p style="color: var(--danger); text-align: center;">Gagal memuat riwayat klaim</p>';
+      }
+    }
+
+    // Multiple files preview
+    let selectedFiles = [];
+    
+    document.getElementById('photos').addEventListener('change', function(e) {
+      selectedFiles = Array.from(e.target.files);
+      const previewContainer = document.getElementById('mediaPreview');
+      previewContainer.innerHTML = '';
+      
+      if (selectedFiles.length === 0) {
+        previewContainer.classList.add('hidden');
+        return;
+      }
+      
+      previewContainer.classList.remove('hidden');
+      
+      selectedFiles.forEach((file, index) => {
+        const mediaItem = document.createElement('div');
+        mediaItem.style.cssText = 'position: relative; border: 2px solid var(--border); border-radius: 5px; overflow: hidden;';
+        
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '×';
+        removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; background: red; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 18px; line-height: 1;';
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          selectedFiles.splice(index, 1);
+          // Update file input
+          const dt = new DataTransfer();
+          selectedFiles.forEach(f => dt.items.add(f));
+          document.getElementById('photos').files = dt.files;
+          // Trigger change event to refresh preview
+          document.getElementById('photos').dispatchEvent(new Event('change'));
+        };
+        
+        if (file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.style.cssText = 'width: 100%; height: 150px; object-fit: cover;';
+          const reader = new FileReader();
+          reader.onload = (e) => { img.src = e.target.result; };
+          reader.readAsDataURL(file);
+          mediaItem.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+          const video = document.createElement('video');
+          video.style.cssText = 'width: 100%; height: 150px; object-fit: cover;';
+          video.controls = true;
+          const reader = new FileReader();
+          reader.onload = (e) => { video.src = e.target.result; };
+          reader.readAsDataURL(file);
+          mediaItem.appendChild(video);
+        }
+        
+        const fileInfo = document.createElement('div');
+        fileInfo.style.cssText = 'padding: 5px; font-size: 0.75rem; background: var(--light);';
+        fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+        mediaItem.appendChild(fileInfo);
+        
+        mediaItem.appendChild(removeBtn);
+        previewContainer.appendChild(mediaItem);
+      });
+    });
+
+    function displayClaims(claims) {
+      const tbody = document.getElementById('claimsTableBody');
+      tbody.innerHTML = '';
+
+      claims.forEach(claim => {
+        const row = document.createElement('tr');
+        
+        const statusBadge = getStatusBadge(claim.status);
+        
+        // Handle multiple media files
+        let mediaCell = '-';
+        if (claim.photo_path) {
+          const mediaPaths = claim.photo_path.split(',');
+          if (mediaPaths.length > 0 && mediaPaths[0]) {
+            mediaCell = mediaPaths.map((path, idx) => {
+              const ext = path.split('.').pop().toLowerCase();
+              const isVideo = ['mp4', 'mov', 'avi', 'wmv', 'webm', 'flv', 'mkv'].includes(ext);
+              const icon = isVideo ? '🎥' : '📷';
+              return `<a href="${path}" target="_blank" style="color: var(--primary); margin-right: 8px;">${icon}${idx + 1}</a>`;
+            }).join('');
+          }
+        }
+        
+        const trackingInfo = claim.tracking_number
+          ? `<strong>${claim.courier_name || 'Kurir'}:</strong><br>${claim.tracking_number}`
+          : '-';
+
+        row.innerHTML = `
+          <td><strong>${claim.product_nama}</strong></td>
+          <td style="font-family: 'Courier New', monospace;">${claim.serial_code}</td>
+          <td>${claim.issue_description}</td>
+          <td>${mediaCell}</td>
+          <td>${formatDateShort(claim.reported_at)}</td>
+          <td>${statusBadge}</td>
+          <td>${claim.admin_notes || '-'}</td>
+          <td style="font-size: 0.85rem;">${trackingInfo}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        'pending': '<span class="badge badge-warning">⏳ Menunggu</span>',
+        'in_progress': '<span class="badge" style="background: #2196f3; color: white;">🔧 Diproses</span>',
+        'completed': '<span class="badge badge-success">✅ Selesai</span>',
+        'rejected': '<span class="badge badge-danger">❌ Ditolak</span>'
+      };
+      return badges[status] || status;
+    }
+
+    // Form submit
+    document.getElementById('claimForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const activationId = document.getElementById('activationId').value;
+      const issueDescription = document.getElementById('issueDescription').value.trim();
+      const photosInput = document.getElementById('photos');
+
+      if (!activationId) {
+        showAlert('Pilih produk yang ingin diklaim', 'error');
+        return;
+      }
+
+      if (!issueDescription) {
+        showAlert('Deskripsi kerusakan wajib diisi', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('token');
+        
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('activationId', activationId);
+        formData.append('issueDescription', issueDescription);
+        
+        // Append multiple files
+        if (photosInput.files.length > 0) {
+          for (let i = 0; i < photosInput.files.length; i++) {
+            formData.append('photos', photosInput.files[i]);
+          }
+        }
+
+        const response = await fetch('/api/claim/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert(`Klaim berhasil diajukan! ${data.claim.files_count > 0 ? `${data.claim.files_count} file uploaded.` : ''}`, 'success');
+          document.getElementById('claimForm').reset();
+          document.getElementById('mediaPreview').classList.add('hidden');
+          selectedFiles = [];
+          
+          // Reload claims list
+          setTimeout(() => {
+            loadMyClaims();
+          }, 1000);
+        } else {
+          showAlert(data.error || 'Gagal mengajukan klaim', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    function showAlert(message, type) {
+      const alertDiv = document.getElementById('alert');
+      alertDiv.className = type === 'success' ? 'alert alert-success' : 'alert alert-error';
+      alertDiv.textContent = message;
+      alertDiv.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      setTimeout(() => {
+        alertDiv.classList.add('hidden');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

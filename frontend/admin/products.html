@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Produk - IAAD-PROJECT Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <h1>📦 Kelola Produk</h1>
+            <p>Tambah, edit, atau hapus produk</p>
+          </div>
+          <button onclick="showAddModal()" class="btn btn-primary">
+            ➕ Tambah Produk Baru
+          </button>
+        </div>
+      </div>
+
+      <div id="alert" class="hidden"></div>
+
+      <!-- Products Table -->
+      <div class="card">
+        <div id="loadingSection" style="text-align: center; padding: 3rem;">
+          <div class="loading" style="margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--gray);">Memuat data produk...</p>
+        </div>
+
+        <div id="tableSection" class="hidden">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nama Produk</th>
+                  <th>Kategori</th>
+                  <th>Durasi Garansi</th>
+                  <th>Deskripsi</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="emptyState" class="hidden" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+          <h3 style="color: var(--gray);">Belum Ada Produk</h3>
+          <button onclick="showAddModal()" class="btn btn-primary" style="margin-top: 1rem;">
+            Tambah Produk Pertama
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Product Modal -->
+  <div id="productModal" class="modal hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 600px; width: 90%; margin: 2rem;">
+      <div class="card-header" id="modalTitle">Tambah Produk Baru</div>
+      
+      <form id="productForm">
+        <input type="hidden" id="productId">
+        
+        <div class="form-group">
+          <label class="form-label">Nama Produk *</label>
+          <input type="text" id="nama" class="form-input" placeholder="Contoh: Smartphone X2" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kategori *</label>
+          <input type="text" id="kategori" class="form-input" placeholder="Contoh: Elektronik, Komputer, dll" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Durasi Garansi (bulan) *</label>
+          <input type="number" id="durasiGaransiBulan" class="form-input" placeholder="12" min="1" required>
+          <small style="color: var(--gray);">Masukkan jumlah bulan, contoh: 12 untuk 1 tahun, 24 untuk 2 tahun</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Deskripsi (Opsional)</label>
+          <textarea id="deskripsi" class="form-input" rows="3" placeholder="Deskripsi produk..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            💾 Simpan
+          </button>
+          <button type="button" onclick="closeModal()" class="btn" style="flex: 1; background: var(--gray); color: white;">
+            ❌ Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: 2rem;">
+      <div class="card-header" style="color: var(--danger);">⚠️ Konfirmasi Hapus</div>
+      
+      <p style="margin-bottom: 1.5rem;">Apakah Anda yakin ingin menghapus produk ini?</p>
+      <p style="color: var(--danger); margin-bottom: 1.5rem;"><strong>Perhatian:</strong> Produk yang sudah memiliki serial numbers tidak bisa dihapus!</p>
+
+      <div style="display: flex; gap: 1rem;">
+        <button onclick="confirmDelete()" class="btn btn-danger" style="flex: 1;">
+          🗑️ Ya, Hapus
+        </button>
+        <button onclick="closeDeleteModal()" class="btn" style="flex: 1; background: var(--gray); color: white;">
+          Batal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    checkAdminAuth();
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    let products = [];
+    let deleteProductId = null;
+
+    // Load products on page load
+    loadProducts();
+
+    async function loadProducts() {
+      const loadingSection = document.getElementById('loadingSection');
+      const tableSection = document.getElementById('tableSection');
+      const emptyState = document.getElementById('emptyState');
+
+      loadingSection.classList.remove('hidden');
+      tableSection.classList.add('hidden');
+      emptyState.classList.add('hidden');
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/products', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          products = data.products;
+          
+          if (products.length === 0) {
+            emptyState.classList.remove('hidden');
+          } else {
+            displayProducts(products);
+            tableSection.classList.remove('hidden');
+          }
+        } else {
+          showAlert('Gagal memuat data produk', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan saat memuat data', 'error');
+      } finally {
+        loadingSection.classList.add('hidden');
+      }
+    }
+
+    function displayProducts(products) {
+      const tbody = document.getElementById('productsTableBody');
+      tbody.innerHTML = '';
+
+      products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${product.id}</td>
+          <td><strong>${product.nama}</strong></td>
+          <td>${product.kategori}</td>
+          <td>${product.durasi_garansi_bulan} bulan</td>
+          <td>${product.deskripsi || '-'}</td>
+          <td>
+            <button onclick="editProduct(${product.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; margin-right: 0.5rem;">
+              ✏️ Edit
+            </button>
+            <button onclick="deleteProduct(${product.id})" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.85rem;">
+              🗑️ Hapus
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function showAddModal() {
+      document.getElementById('modalTitle').textContent = 'Tambah Produk Baru';
+      document.getElementById('productId').value = '';
+      document.getElementById('productForm').reset();
+      document.getElementById('productModal').style.display = 'flex';
+    }
+
+    function editProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      document.getElementById('modalTitle').textContent = 'Edit Produk';
+      document.getElementById('productId').value = product.id;
+      document.getElementById('nama').value = product.nama;
+      document.getElementById('kategori').value = product.kategori;
+      document.getElementById('durasiGaransiBulan').value = product.durasi_garansi_bulan;
+      document.getElementById('deskripsi').value = product.deskripsi || '';
+      document.getElementById('productModal').style.display = 'flex';
+    }
+
+    function deleteProduct(id) {
+      deleteProductId = id;
+      document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('productModal').style.display = 'none';
+      document.getElementById('productForm').reset();
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').style.display = 'none';
+      deleteProductId = null;
+    }
+
+    // Form submit handler
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const productId = document.getElementById('productId').value;
+      const nama = document.getElementById('nama').value.trim();
+      const kategori = document.getElementById('kategori').value.trim();
+      const durasiGaransiBulan = parseInt(document.getElementById('durasiGaransiBulan').value);
+      const deskripsi = document.getElementById('deskripsi').value.trim();
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const url = productId ? `/api/admin/products/${productId}` : '/api/admin/products';
+        const method = productId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ nama, kategori, durasiGaransiBulan, deskripsi })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert(data.message, 'success');
+          closeModal();
+          loadProducts();
+        } else {
+          showAlert(data.error || 'Gagal menyimpan produk', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    async function confirmDelete() {
+      if (!deleteProductId) return;
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch(`/api/admin/products/${deleteProductId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert(data.message, 'success');
+          closeDeleteModal();
+          loadProducts();
+        } else {
+          showAlert(data.error || 'Gagal menghapus produk', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function showAlert(message, type) {
+      const alertDiv = document.getElementById('alert');
+      alertDiv.className = type === 'success' ? 'alert alert-success' : 'alert alert-error';
+      alertDiv.textContent = message;
+      alertDiv.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      setTimeout(() => {
+        alertDiv.classList.add('hidden');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

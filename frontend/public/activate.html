@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aktivasi Produk - IAAD-PROJECT</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🛡️ IAAD-PROJECT</a>
+      <ul class="navbar-menu">
+        <li><a href="/public/dashboard.html">Dashboard</a></li>
+        <li><a href="/public/activate.html">Aktivasi Produk</a></li>
+        <li><a href="/public/claims.html">Klaim Garansi</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>🎯 Aktivasi Produk</h1>
+        <p>Masukkan serial number yang ada pada produk Anda</p>
+      </div>
+
+      <div style="max-width: 700px; margin: 0 auto;">
+        <div class="card">
+          <div id="alert" class="hidden"></div>
+
+          <form id="activateForm">
+            <div class="form-group">
+              <label class="form-label">Serial Number</label>
+              <input 
+                type="text" 
+                id="serialCode" 
+                class="form-input" 
+                placeholder="XXXX-XXXX-XXXX-XXXX"
+                style="text-transform: uppercase; font-family: 'Courier New', monospace; font-size: 1.2rem;"
+                required
+              >
+              <small style="color: var(--gray);">Masukkan kode serial yang tertera pada produk Anda</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              ✅ Aktivasi Sekarang
+            </button>
+          </form>
+
+          <div style="margin-top: 2rem; padding: 1.5rem; background: #e3f2fd; border-radius: 5px; border-left: 4px solid var(--primary);">
+            <h4 style="margin-bottom: 1rem;">ℹ️ Informasi Penting:</h4>
+            <ul style="margin: 0; padding-left: 1.5rem;">
+              <li>Serial number hanya dapat digunakan satu kali</li>
+              <li>Pastikan Anda memasukkan kode yang benar</li>
+              <li>Anda akan menerima email konfirmasi setelah aktivasi berhasil</li>
+              <li>Garansi akan aktif sesuai dengan durasi produk</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Success Card -->
+        <div id="successCard" class="card hidden" style="border: 2px solid var(--success);">
+          <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="color: var(--success); margin-bottom: 1rem;">Aktivasi Berhasil!</h2>
+            <p style="color: var(--gray); margin-bottom: 1.5rem;">Garansi produk Anda telah diaktifkan.</p>
+            
+            <div style="background: var(--light); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
+              <h3 style="color: var(--primary); margin-bottom: 0.5rem;" id="successProductName"></h3>
+              <div class="serial-code" id="successSerialCode" style="margin: 1rem 0;"></div>
+              <p style="margin: 0; color: var(--gray);">
+                Masa garansi: <strong id="successWarrantyPeriod"></strong>
+              </p>
+              <p style="margin: 0.5rem 0 0 0; color: var(--gray);">
+                Berlaku hingga: <strong id="successExpiredDate"></strong>
+              </p>
+            </div>
+
+            <div class="alert alert-info">
+              <strong>📧 Email konfirmasi telah dikirim</strong><br>
+              Silakan cek inbox email Anda untuk detail garansi.
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+              <a href="/public/dashboard.html" class="btn btn-primary">
+                📊 Lihat Dashboard
+              </a>
+              <button onclick="resetForm()" class="btn btn-success">
+                ➕ Aktivasi Produk Lain
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script>
+    // Check authentication
+    checkAuth();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logout();
+    });
+
+    const form = document.getElementById('activateForm');
+    const alertDiv = document.getElementById('alert');
+    const successCard = document.getElementById('successCard');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const serialCode = document.getElementById('serialCode').value.trim().toUpperCase();
+
+      if (!serialCode) {
+        showAlert('Serial code wajib diisi', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/activation/activate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ serialCode })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Show success card
+          document.getElementById('successProductName').textContent = data.activation.product_nama;
+          document.getElementById('successSerialCode').textContent = data.activation.serial_code;
+          document.getElementById('successWarrantyPeriod').textContent = `${data.activation.durasi_garansi} bulan`;
+          document.getElementById('successExpiredDate').textContent = formatDate(data.activation.warranty_expired_at);
+
+          form.parentElement.classList.add('hidden');
+          successCard.classList.remove('hidden');
+        } else {
+          showAlert(data.error || 'Aktivasi gagal', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    function resetForm() {
+      form.reset();
+      form.parentElement.classList.remove('hidden');
+      successCard.classList.add('hidden');
+      alertDiv.classList.add('hidden');
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
+    function showAlert(message, type) {
+      alertDiv.className = type === 'success' ? 'alert alert-success' : 'alert alert-error';
+      alertDiv.textContent = message;
+      alertDiv.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+    }
+  </script>
+</body>
+</html>

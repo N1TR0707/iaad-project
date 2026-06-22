@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - IAAD-PROJECT</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>📊 Admin Dashboard</h1>
+        <p>IAAD-PROJECT - Warranty Management System</p>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingSection" style="text-align: center; padding: 3rem;">
+        <div class="loading" style="margin: 0 auto;"></div>
+        <p style="margin-top: 1rem; color: var(--gray);">Memuat statistik...</p>
+      </div>
+
+      <!-- Stats Section -->
+      <div id="statsSection" class="hidden">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalActivations">0</div>
+            <div class="stat-label">Total Aktivasi</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-number" id="activeWarranties">0</div>
+            <div class="stat-label">Garansi Aktif</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="stat-number" id="expiredWarranties">0</div>
+            <div class="stat-label">Garansi Expired</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-number" id="totalUsers">0</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalProducts">0</div>
+            <div class="stat-label">Total Produk</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="totalSerials">0</div>
+            <div class="stat-label">Serial Numbers</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-number" id="availableSerials">0</div>
+            <div class="stat-label">Serial Tersedia</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-number" id="usedSerials">0</div>
+            <div class="stat-label">Serial Terpakai</div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">⚡ Aksi Cepat</div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="/admin/products.html" class="btn btn-success">
+              📦 Kelola Produk
+            </a>
+            <a href="/admin/generate-serial.html" class="btn btn-primary">
+              ➕ Generate Serial Numbers
+            </a>
+            <a href="/admin/activations.html" class="btn btn-primary">
+              📋 Lihat Semua Aktivasi
+            </a>
+            <a href="/admin/claims.html" class="btn btn-warning">
+              🔧 Kelola Klaim Garansi
+            </a>
+            <button onclick="exportActivations()" class="btn" style="background: var(--gray); color: white;">
+              📥 Export Data Aktivasi
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Activations -->
+        <div class="card">
+          <div class="card-header">📦 Aktivasi Terbaru</div>
+          <div id="recentActivations">
+            <p style="text-align: center; color: var(--gray); padding: 2rem;">
+              Loading...
+            </p>
+          </div>
+        </div>
+
+        <!-- Monthly Stats -->
+        <div class="card">
+          <div class="card-header">📈 Statistik Bulanan</div>
+          <div id="monthlyStats">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bulan</th>
+                  <th>Jumlah Aktivasi</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyStatsBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    // Check admin authentication
+    checkAdminAuth();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    // Load dashboard data
+    loadDashboardStats();
+
+    function exportActivations() {
+      const token = localStorage.getItem('adminToken');
+      window.open(`/api/admin/activations/export?token=${token}`, '_blank');
+    }
+  </script>
+</body>
+</html>

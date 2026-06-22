@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - IAAD-PROJECT</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🛡️ IAAD-PROJECT</a>
+      <ul class="navbar-menu">
+        <li><a href="/public/dashboard.html">Dashboard</a></li>
+        <li><a href="/public/activate.html">Aktivasi Produk</a></li>
+        <li><a href="/public/claims.html">Klaim Garansi</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>👋 Selamat Datang, <span id="userName"></span>!</h1>
+        <p>Kelola dan pantau status garansi produk Anda di sini</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card success">
+          <div class="stat-number" id="activeCount">0</div>
+          <div class="stat-label">Garansi Aktif</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-number" id="expiredCount">0</div>
+          <div class="stat-label">Garansi Expired</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="totalCount">0</div>
+          <div class="stat-label">Total Produk</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 style="margin: 0;">⚡ Aksi Cepat</h2>
+        </div>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="/public/activate.html" class="btn btn-primary">
+            ➕ Aktivasi Produk Baru
+          </a>
+          <a href="/public/check-warranty.html" class="btn btn-success">
+            🔍 Cek Status Garansi
+          </a>
+        </div>
+      </div>
+
+      <!-- Activations List -->
+      <div class="card">
+        <div class="card-header">📦 Produk Saya</div>
+        
+        <div id="loadingSection" style="text-align: center; padding: 2rem;">
+          <div class="loading" style="margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--gray);">Memuat data...</p>
+        </div>
+
+        <div id="emptyState" class="hidden" style="text-align: center; padding: 3rem;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+          <h3 style="margin-bottom: 1rem; color: var(--gray);">Belum Ada Produk Teraktivasi</h3>
+          <p style="color: var(--gray); margin-bottom: 2rem;">Mulai aktifkan produk Anda sekarang!</p>
+          <a href="/public/activate.html" class="btn btn-primary">Aktivasi Produk</a>
+        </div>
+
+        <div id="activationsList" class="hidden">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produk</th>
+                  <th>Serial Number</th>
+                  <th>Tanggal Aktivasi</th>
+                  <th>Masa Berlaku</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="activationsTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script>
+    // Check authentication
+    checkAuth();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logout();
+    });
+
+    // Load user info
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+      document.getElementById('userName').textContent = user.nama;
+    }
+
+    // Load activations
+    loadActivations();
+  </script>
+</body>
+</html>

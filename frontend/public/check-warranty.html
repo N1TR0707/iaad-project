@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cek Status Garansi - IAAD-PROJECT</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🛡️ IAAD-PROJECT</a>
+      <ul class="navbar-menu">
+        <li><a href="/public/index.html">Beranda</a></li>
+        <li><a href="/public/login.html">Login</a></li>
+        <li><a href="/public/register.html">Daftar</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header text-center">
+        <h1>🔍 Cek Status Garansi</h1>
+        <p>Masukkan serial number produk Anda untuk mengecek status garansi</p>
+      </div>
+
+      <div style="max-width: 600px; margin: 0 auto;">
+        <div class="card">
+          <div id="alert" class="hidden"></div>
+          
+          <form id="checkForm">
+            <div class="form-group">
+              <label class="form-label">Serial Number</label>
+              <input 
+                type="text" 
+                id="serialCode" 
+                class="form-input" 
+                placeholder="XXXX-XXXX-XXXX-XXXX"
+                style="text-transform: uppercase; font-family: 'Courier New', monospace; font-size: 1.2rem;"
+                required
+              >
+              <small style="color: var(--gray);">Format: XXXX-XXXX-XXXX-XXXX</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+              Cek Garansi
+            </button>
+          </form>
+        </div>
+
+        <!-- Result Card -->
+        <div id="resultCard" class="card hidden">
+          <div class="card-header">📋 Informasi Garansi</div>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <h3 style="color: var(--primary); margin-bottom: 0.5rem;" id="productName"></h3>
+            <p style="color: var(--gray); margin: 0;" id="productCategory"></p>
+          </div>
+
+          <div style="background: var(--light); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
+            <div class="serial-code" id="serialDisplay"></div>
+          </div>
+
+          <div style="display: grid; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 500;">Status:</span>
+              <span id="warrantyStatus"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 500;">Tanggal Aktivasi:</span>
+              <span id="activatedDate"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 500;">Masa Berlaku Hingga:</span>
+              <span id="expiredDate"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem;">
+              <span style="font-weight: 500;">Sisa Waktu:</span>
+              <span id="daysRemaining"></span>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding: 1rem; background: #e3f2fd; border-radius: 5px;">
+            <p style="margin: 0; font-size: 0.9rem; color: var(--dark);">
+              <strong>Pemilik:</strong> <span id="ownerName"></span> (<span id="ownerEmail"></span>)
+            </p>
+          </div>
+        </div>
+
+        <!-- Not Found Card -->
+        <div id="notFoundCard" class="card hidden">
+          <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">❌</div>
+            <h3 style="color: var(--danger); margin-bottom: 1rem;">Serial Number Tidak Ditemukan</h3>
+            <p style="color: var(--gray);">Serial number tidak terdaftar atau belum diaktivasi.</p>
+            <a href="/public/register.html" class="btn btn-primary" style="margin-top: 1rem;">
+              Daftar untuk Aktivasi
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('checkForm');
+    const alertDiv = document.getElementById('alert');
+    const resultCard = document.getElementById('resultCard');
+    const notFoundCard = document.getElementById('notFoundCard');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const serialCode = document.getElementById('serialCode').value.trim().toUpperCase();
+
+      // Hide previous results
+      resultCard.classList.add('hidden');
+      notFoundCard.classList.add('hidden');
+      alertDiv.classList.add('hidden');
+
+      if (!serialCode) {
+        showAlert('Serial number wajib diisi', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const response = await fetch(`/api/activation/check-warranty?serialCode=${encodeURIComponent(serialCode)}`);
+        const data = await response.json();
+
+        if (response.ok && data.found) {
+          displayResult(data);
+        } else {
+          notFoundCard.classList.remove('hidden');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    function displayResult(data) {
+      document.getElementById('productName').textContent = data.product.nama;
+      document.getElementById('productCategory').textContent = data.product.kategori;
+      document.getElementById('serialDisplay').textContent = data.warranty.serial_code;
+
+      const isExpired = data.warranty.is_expired;
+      const statusHTML = isExpired 
+        ? '<span class="badge badge-danger">EXPIRED</span>'
+        : '<span class="badge badge-success">AKTIF</span>';
+      document.getElementById('warrantyStatus').innerHTML = statusHTML;
+
+      document.getElementById('activatedDate').textContent = formatDate(data.warranty.activated_at);
+      document.getElementById('expiredDate').textContent = formatDate(data.warranty.expired_at);
+      
+      const daysText = isExpired 
+        ? 'Garansi telah berakhir'
+        : `${data.warranty.days_remaining} hari lagi`;
+      document.getElementById('daysRemaining').textContent = daysText;
+
+      document.getElementById('ownerName').textContent = data.owner.nama;
+      document.getElementById('ownerEmail').textContent = data.owner.email;
+
+      resultCard.classList.remove('hidden');
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
+    function showAlert(message, type) {
+      alertDiv.className = type === 'success' ? 'alert alert-success' : 'alert alert-error';
+      alertDiv.textContent = message;
+      alertDiv.classList.remove('hidden');
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+const express = require('express');
+const router = express.Router();
+const adminController = require('../controllers/adminController');
+const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { serialGenerationLimiter } = require('../middleware/rateLimiter');
+
+// All admin routes require admin authentication
+router.use(authenticateAdmin);
+
+// Dashboard & Statistics
+router.get('/stats', adminController.getDashboardStats);
+
+// Product Management
+router.get('/products', adminController.getAllProducts);
+router.post('/products', adminController.createProduct);
+router.put('/products/:id', adminController.updateProduct);
+router.delete('/products/:id', adminController.deleteProduct);
+
+// Serial Number Management
+router.post('/serials/generate', serialGenerationLimiter, adminController.generateSerials);
+router.get('/serials', adminController.getAllSerials);
+router.get('/serials/product/:productId', adminController.getProductSerials);
+router.delete('/serials/:id', adminController.deleteSerial);
+router.put('/serials/:id/status', adminController.updateSerialStatus);
+router.get('/serials/export/:productId', adminController.exportSerials);
+
+// Activation Management
+router.get('/activations', adminController.getAllActivations);
+router.get('/activations/export', adminController.exportActivations);
+
+// User Management
+router.get('/users', adminController.getAllUsers);
+
+// Warranty Claims Management
+router.get('/claims', adminController.getAllClaims);
+router.get('/claims/:id', adminController.getClaimById);
+router.put('/claims/:id/status', adminController.updateClaimStatus);
+router.get('/claims/export', adminController.exportClaims);
+
+module.exports = router;

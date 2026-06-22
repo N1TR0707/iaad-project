@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate Serial Numbers - IAAD-PROJECT Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/admin/dashboard.html" class="navbar-brand">🛡️ IAAD-PROJECT Admin</a>
+      <ul class="navbar-menu">
+        <li><a href="/admin/dashboard.html">Dashboard</a></li>
+        <li><a href="/admin/products.html">Produk</a></li>
+        <li><a href="/admin/serials.html">Serial Numbers</a></li>
+        <li><a href="/admin/generate-serial.html">Generate Serial</a></li>
+        <li><a href="/admin/activations.html">Aktivasi</a></li>
+        <li><a href="/admin/claims.html">Klaim</a></li>
+        <li><a href="#" id="logoutBtn">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>🔢 Generate Serial Numbers</h1>
+        <p>Buat serial numbers baru untuk produk</p>
+      </div>
+
+      <div style="max-width: 800px; margin: 0 auto;">
+        <div class="card">
+          <div id="alert" class="hidden"></div>
+
+          <form id="generateForm">
+            <div class="form-group">
+              <label class="form-label">Pilih Produk</label>
+              <select id="productId" class="form-select" required>
+                <option value="">-- Pilih Produk --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Jumlah Serial Numbers</label>
+              <input 
+                type="number" 
+                id="count" 
+                class="form-input" 
+                placeholder="Masukkan jumlah (1-1000)"
+                min="1"
+                max="1000"
+                required
+              >
+              <small style="color: var(--gray);">Maksimal 1000 serial numbers per batch</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              ✨ Generate Serial Numbers
+            </button>
+          </form>
+        </div>
+
+        <!-- Result Card -->
+        <div id="resultCard" class="card hidden">
+          <div class="card-header">✅ Serial Numbers Berhasil Dibuat</div>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <p><strong>Produk:</strong> <span id="resultProduct"></span></p>
+            <p><strong>Jumlah:</strong> <span id="resultCount"></span> serial numbers</p>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <button onclick="downloadCSV()" class="btn btn-success">
+              📥 Download CSV
+            </button>
+            <button onclick="copyToClipboard()" class="btn btn-primary">
+              📋 Copy ke Clipboard
+            </button>
+          </div>
+
+          <div style="background: var(--light); padding: 1rem; border-radius: 5px; max-height: 400px; overflow-y: auto;">
+            <pre id="serialsList" style="margin: 0; font-family: 'Courier New', monospace; font-size: 0.9rem;"></pre>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <button onclick="resetForm()" class="btn btn-outline" style="background: white; color: var(--primary); border: 1px solid var(--primary);">
+              ➕ Generate Lagi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading"></div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    checkAdminAuth();
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutAdmin();
+    });
+
+    let generatedSerials = [];
+    let currentProduct = '';
+
+    // Load products
+    loadProducts();
+
+    const form = document.getElementById('generateForm');
+    const alertDiv = document.getElementById('alert');
+    const resultCard = document.getElementById('resultCard');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const productId = document.getElementById('productId').value;
+      const count = parseInt(document.getElementById('count').value);
+
+      if (!productId || !count) {
+        showAlert('Semua field wajib diisi', 'error');
+        return;
+      }
+
+      if (count < 1 || count > 1000) {
+        showAlert('Jumlah harus antara 1-1000', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/serials/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ productId, count })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          generatedSerials = data.serials;
+          currentProduct = data.product;
+          displayResult(data);
+          form.parentElement.classList.add('hidden');
+          resultCard.classList.remove('hidden');
+        } else {
+          showAlert(data.error || 'Generate gagal', 'error');
+        }
+      } catch (error) {
+        showAlert('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    function displayResult(data) {
+      document.getElementById('resultProduct').textContent = data.product;
+      document.getElementById('resultCount').textContent = data.count;
+      document.getElementById('serialsList').textContent = data.serials.join('\n');
+    }
+
+    function downloadCSV() {
+      const csv = 'Serial Number\n' + generatedSerials.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `serials-${currentProduct}-${Date.now()}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function copyToClipboard() {
+      const text = generatedSerials.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Serial numbers berhasil di-copy ke clipboard!');
+      });
+    }
+
+    function resetForm() {
+      form.reset();
+      form.parentElement.classList.remove('hidden');
+      resultCard.classList.add('hidden');
+      alertDiv.classList.add('hidden');
+      generatedSerials = [];
+    }
+
+    function showAlert(message, type) {
+      alertDiv.className = type === 'success' ? 'alert alert-success' : 'alert alert-error';
+      alertDiv.textContent = message;
+      alertDiv.classList.remove('hidden');
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+    }
+  </script>
+</body>
+</html>
