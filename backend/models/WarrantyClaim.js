@@ -1,12 +1,15 @@
 const db = require('../config/database');
 
 class WarrantyClaim {
-  static async create(activationId, userId, productId, issueDescription, photoPath = null) {
+  static async create(activationId, userId, productId, issueDescription, photoPath = null, userTrackingNumber = null, userCourierName = null) {
+    // Set initial status based on whether user provided tracking
+    const initialStatus = userTrackingNumber ? 'item_shipped' : 'pending';
+    
     const result = await db.run(
       `INSERT INTO warranty_claims 
-       (activation_id, user_id, product_id, issue_description, photo_path, status) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [activationId, userId, productId, issueDescription, photoPath, 'pending']
+       (activation_id, user_id, product_id, issue_description, photo_path, status, user_tracking_number, user_courier_name) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [activationId, userId, productId, issueDescription, photoPath, initialStatus, userTrackingNumber, userCourierName]
     );
     return result.id;
   }
@@ -71,7 +74,7 @@ class WarrantyClaim {
     return await db.all(query, params);
   }
 
-  static async updateStatus(id, status, adminNotes = null, trackingNumber = null, courierName = null) {
+  static async updateStatus(id, status, adminNotes = null, returnTrackingNumber = null, returnCourierName = null) {
     const params = [status];
     let query = 'UPDATE warranty_claims SET status = ?';
 
@@ -80,14 +83,23 @@ class WarrantyClaim {
       params.push(adminNotes);
     }
 
-    if (trackingNumber) {
-      query += ', tracking_number = ?';
-      params.push(trackingNumber);
+    if (returnTrackingNumber) {
+      query += ', return_tracking_number = ?';
+      params.push(returnTrackingNumber);
     }
 
-    if (courierName) {
-      query += ', courier_name = ?';
-      params.push(courierName);
+    if (returnCourierName) {
+      query += ', return_courier_name = ?';
+      params.push(returnCourierName);
+    }
+
+    // Auto-set timestamps based on status
+    if (status === 'item_received') {
+      query += ', item_received_at = CURRENT_TIMESTAMP';
+    }
+
+    if (status === 'return_shipped') {
+      query += ', return_shipped_at = CURRENT_TIMESTAMP';
     }
 
     if (status === 'completed' || status === 'rejected') {

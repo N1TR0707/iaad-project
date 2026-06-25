@@ -5,7 +5,7 @@ const { sanitizeInput } = require('../utils/validators');
 // Submit warranty claim (user)
 exports.submitClaim = async (req, res) => {
   try {
-    const { activationId, issueDescription } = req.body;
+    const { activationId, issueDescription, userTrackingNumber, userCourierName } = req.body;
     const userId = req.user.id;
     
     // Handle multiple files (photos/videos)
@@ -17,7 +17,14 @@ exports.submitClaim = async (req, res) => {
       return res.status(400).json({ error: 'Activation ID dan deskripsi masalah wajib diisi' });
     }
 
+    // Validate tracking number if provided
+    if (!userTrackingNumber || !userCourierName) {
+      return res.status(400).json({ error: 'Nomor resi dan nama kurir wajib diisi' });
+    }
+
     const sanitizedDescription = sanitizeInput(issueDescription);
+    const sanitizedUserTracking = userTrackingNumber ? sanitizeInput(userTrackingNumber) : null;
+    const sanitizedUserCourier = userCourierName ? sanitizeInput(userCourierName) : null;
 
     // Verify activation belongs to user
     const activations = await Activation.findByUserId(userId);
@@ -40,7 +47,9 @@ exports.submitClaim = async (req, res) => {
       userId,
       activation.product_id,
       sanitizedDescription,
-      mediaPaths
+      mediaPaths,
+      sanitizedUserTracking,
+      sanitizedUserCourier
     );
 
     res.status(201).json({
@@ -49,9 +58,11 @@ exports.submitClaim = async (req, res) => {
         id: claimId,
         activation_id: activationId,
         issue_description: sanitizedDescription,
+        user_tracking_number: sanitizedUserTracking,
+        user_courier_name: sanitizedUserCourier,
         media_paths: mediaPaths,
         files_count: req.files ? req.files.length : 0,
-        status: 'pending',
+        status: sanitizedUserTracking ? 'item_shipped' : 'pending',
         reported_at: new Date().toISOString()
       }
     });

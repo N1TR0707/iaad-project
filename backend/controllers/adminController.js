@@ -408,13 +408,13 @@ exports.getClaimById = async (req, res) => {
 exports.updateClaimStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, adminNotes, trackingNumber, courierName } = req.body;
+    const { status, adminNotes, returnTrackingNumber, returnCourierName } = req.body;
 
     if (!status) {
       return res.status(400).json({ error: 'Status wajib diisi' });
     }
 
-    const validStatuses = ['pending', 'in_progress', 'completed', 'rejected'];
+    const validStatuses = ['pending', 'awaiting_shipment', 'item_shipped', 'item_received', 'in_progress', 'return_shipped', 'completed', 'rejected'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Status tidak valid' });
     }
@@ -426,17 +426,17 @@ exports.updateClaimStatus = async (req, res) => {
     }
 
     const sanitizedNotes = adminNotes ? sanitizeInput(adminNotes) : null;
-    const sanitizedTrackingNumber = trackingNumber ? sanitizeInput(trackingNumber) : null;
-    const sanitizedCourierName = courierName ? sanitizeInput(courierName) : null;
+    const sanitizedReturnTracking = returnTrackingNumber ? sanitizeInput(returnTrackingNumber) : null;
+    const sanitizedReturnCourier = returnCourierName ? sanitizeInput(returnCourierName) : null;
 
-    await WarrantyClaim.updateStatus(id, status, sanitizedNotes, sanitizedTrackingNumber, sanitizedCourierName);
+    await WarrantyClaim.updateStatus(id, status, sanitizedNotes, sanitizedReturnTracking, sanitizedReturnCourier);
 
     res.json({ 
       message: 'Status klaim berhasil diupdate',
       status,
       adminNotes: sanitizedNotes,
-      trackingNumber: sanitizedTrackingNumber,
-      courierName: sanitizedCourierName
+      returnTrackingNumber: sanitizedReturnTracking,
+      returnCourierName: sanitizedReturnCourier
     });
   } catch (error) {
     console.error('Update claim status error:', error);

@@ -70,7 +70,11 @@
           <select id="statusFilter" class="form-select" style="min-width: 150px;">
             <option value="">Semua Status</option>
             <option value="pending">Menunggu</option>
+            <option value="awaiting_shipment">Menunggu Pengiriman</option>
+            <option value="item_shipped">Barang Dikirim</option>
+            <option value="item_received">Barang Diterima</option>
             <option value="in_progress">Diproses</option>
+            <option value="return_shipped">Dikirim Kembali</option>
             <option value="completed">Selesai</option>
             <option value="rejected">Ditolak</option>
           </select>
@@ -97,6 +101,8 @@
                   <th>Serial</th>
                   <th>Kerusakan</th>
                   <th>Foto</th>
+                  <th>Resi User</th>
+                  <th>Resi Return</th>
                   <th>Tanggal</th>
                   <th>Status</th>
                   <th>Aksi</th>
@@ -138,7 +144,11 @@
           <label class="form-label">Status *</label>
           <select id="status" class="form-select" required>
             <option value="pending">⏳ Menunggu</option>
+            <option value="awaiting_shipment">📦 Menunggu Pengiriman</option>
+            <option value="item_shipped">🚚 Barang Dikirim</option>
+            <option value="item_received">📥 Barang Diterima</option>
             <option value="in_progress">🔧 Diproses</option>
+            <option value="return_shipped">📤 Dikirim Kembali</option>
             <option value="completed">✅ Selesai</option>
             <option value="rejected">❌ Ditolak</option>
           </select>
@@ -150,14 +160,25 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Nomor Resi (Tracking Number)</label>
-          <input type="text" id="trackingNumber" class="form-input" placeholder="Contoh: JNE123456789">
-          <small style="color: var(--gray);">Isi jika produk dikirim kembali ke customer</small>
+          <label class="form-label">Resi User ke Seller</label>
+          <p id="modalUserTracking" style="font-family: monospace; color: var(--primary); margin: 0.5rem 0;">-</p>
+          <small style="color: var(--gray);">Nomor resi yang diinput user saat submit claim</small>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Nama Kurir</label>
-          <input type="text" id="courierName" class="form-input" placeholder="Contoh: JNE, J&T, Sicepat, dll">
+          <label class="form-label">Kurir User</label>
+          <p id="modalUserCourier" style="margin: 0.5rem 0;">-</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nomor Resi Pengiriman Kembali (Return Tracking)</label>
+          <input type="text" id="returnTrackingNumber" class="form-input" placeholder="Contoh: JNE123456789">
+          <small style="color: var(--gray);">Isi saat mengirim produk kembali ke customer (status: return_shipped)</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Kurir Return</label>
+          <input type="text" id="returnCourierName" class="form-input" placeholder="Contoh: JNE, J&T, Sicepat, dll">
         </div>
 
         <div style="display: flex; gap: 1rem;">
@@ -288,6 +309,14 @@
           }
         }
         
+        const userTrackingCell = claim.user_tracking_number
+          ? `<strong>${claim.user_courier_name}:</strong><br><span style="font-family: monospace; font-size: 0.85rem;">${claim.user_tracking_number}</span>`
+          : '-';
+
+        const returnTrackingCell = claim.return_tracking_number
+          ? `<strong>${claim.return_courier_name}:</strong><br><span style="font-family: monospace; font-size: 0.85rem;">${claim.return_tracking_number}</span>`
+          : '-';
+
         row.innerHTML = `
           <td>${claim.id}</td>
           <td>
@@ -298,6 +327,8 @@
           <td style="font-family: 'Courier New', monospace; font-size: 0.85rem;">${claim.serial_code}</td>
           <td style="max-width: 200px;">${claim.issue_description}</td>
           <td>${mediaCell}</td>
+          <td style="font-size: 0.85rem;">${userTrackingCell}</td>
+          <td style="font-size: 0.85rem;">${returnTrackingCell}</td>
           <td>${formatDateShort(claim.reported_at)}</td>
           <td>${statusBadge}</td>
           <td>
@@ -313,7 +344,11 @@
     function getStatusBadge(status) {
       const badges = {
         'pending': '<span class="badge badge-warning">⏳ Menunggu</span>',
+        'awaiting_shipment': '<span class="badge" style="background: #ff9800; color: white;">📦 Menunggu Pengiriman</span>',
+        'item_shipped': '<span class="badge" style="background: #2196f3; color: white;">🚚 Barang Dikirim</span>',
+        'item_received': '<span class="badge" style="background: #9c27b0; color: white;">📥 Barang Diterima</span>',
         'in_progress': '<span class="badge" style="background: #2196f3; color: white;">🔧 Diproses</span>',
+        'return_shipped': '<span class="badge" style="background: #00bcd4; color: white;">📤 Dikirim Kembali</span>',
         'completed': '<span class="badge badge-success">✅ Selesai</span>',
         'rejected': '<span class="badge badge-danger">❌ Ditolak</span>'
       };
@@ -381,8 +416,10 @@
       
       document.getElementById('status').value = claim.status;
       document.getElementById('adminNotes').value = claim.admin_notes || '';
-      document.getElementById('trackingNumber').value = claim.tracking_number || '';
-      document.getElementById('courierName').value = claim.courier_name || '';
+      document.getElementById('modalUserTracking').textContent = claim.user_tracking_number || '-';
+      document.getElementById('modalUserCourier').textContent = claim.user_courier_name || '-';
+      document.getElementById('returnTrackingNumber').value = claim.return_tracking_number || '';
+      document.getElementById('returnCourierName').value = claim.return_courier_name || '';
       
       document.getElementById('updateModal').style.display = 'flex';
     }
@@ -399,8 +436,8 @@
       const claimId = document.getElementById('claimId').value;
       const status = document.getElementById('status').value;
       const adminNotes = document.getElementById('adminNotes').value.trim();
-      const trackingNumber = document.getElementById('trackingNumber').value.trim();
-      const courierName = document.getElementById('courierName').value.trim();
+      const returnTrackingNumber = document.getElementById('returnTrackingNumber').value.trim();
+      const returnCourierName = document.getElementById('returnCourierName').value.trim();
 
       showLoading(true);
 
@@ -415,8 +452,8 @@
           body: JSON.stringify({ 
             status, 
             adminNotes,
-            trackingNumber,
-            courierName
+            returnTrackingNumber,
+            returnCourierName
           })
         });
 

@@ -56,6 +56,29 @@
             </div>
 
             <div class="form-group">
+              <label class="form-label">Nomor Resi Pengiriman ke Seller *</label>
+              <input 
+                type="text" 
+                id="userTrackingNumber" 
+                class="form-input" 
+                placeholder="Contoh: JNE123456789"
+                required
+              >
+              <small style="color: var(--gray);">Masukkan nomor resi pengiriman barang ke seller</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nama Kurir *</label>
+              <input 
+                type="text" 
+                id="userCourierName" 
+                class="form-input" 
+                placeholder="Contoh: JNE, J&T, SiCepat, dll"
+                required
+              >
+            </div>
+
+            <div class="form-group">
               <label class="form-label">Foto/Video Kerusakan (Opsional)</label>
               <input 
                 type="file" 
@@ -113,6 +136,8 @@
                     <th>Serial Number</th>
                     <th>Kerusakan</th>
                     <th>Foto</th>
+                    <th>Resi User</th>
+                    <th>Resi Return</th>
                     <th>Tanggal</th>
                     <th>Status</th>
                     <th>Catatan Admin</th>
@@ -296,8 +321,12 @@
           }
         }
         
-        const trackingInfo = claim.tracking_number
-          ? `<strong>${claim.courier_name || 'Kurir'}:</strong><br>${claim.tracking_number}`
+        const userTrackingInfo = claim.user_tracking_number
+          ? `<strong>${claim.user_courier_name || 'Kurir'}:</strong><br>${claim.user_tracking_number}`
+          : '-';
+
+        const returnTrackingInfo = claim.return_tracking_number
+          ? `<strong>${claim.return_courier_name || 'Kurir'}:</strong><br>${claim.return_tracking_number}`
           : '-';
 
         row.innerHTML = `
@@ -305,10 +334,11 @@
           <td style="font-family: 'Courier New', monospace;">${claim.serial_code}</td>
           <td>${claim.issue_description}</td>
           <td>${mediaCell}</td>
+          <td style="font-size: 0.85rem;">${userTrackingInfo}</td>
+          <td style="font-size: 0.85rem;">${returnTrackingInfo}</td>
           <td>${formatDateShort(claim.reported_at)}</td>
           <td>${statusBadge}</td>
           <td>${claim.admin_notes || '-'}</td>
-          <td style="font-size: 0.85rem;">${trackingInfo}</td>
         `;
         tbody.appendChild(row);
       });
@@ -317,7 +347,11 @@
     function getStatusBadge(status) {
       const badges = {
         'pending': '<span class="badge badge-warning">⏳ Menunggu</span>',
+        'awaiting_shipment': '<span class="badge" style="background: #ff9800; color: white;">📦 Menunggu Pengiriman</span>',
+        'item_shipped': '<span class="badge" style="background: #2196f3; color: white;">🚚 Barang Dikirim</span>',
+        'item_received': '<span class="badge" style="background: #9c27b0; color: white;">📥 Barang Diterima</span>',
         'in_progress': '<span class="badge" style="background: #2196f3; color: white;">🔧 Diproses</span>',
+        'return_shipped': '<span class="badge" style="background: #00bcd4; color: white;">📤 Dikirim Kembali</span>',
         'completed': '<span class="badge badge-success">✅ Selesai</span>',
         'rejected': '<span class="badge badge-danger">❌ Ditolak</span>'
       };
@@ -330,6 +364,8 @@
 
       const activationId = document.getElementById('activationId').value;
       const issueDescription = document.getElementById('issueDescription').value.trim();
+      const userTrackingNumber = document.getElementById('userTrackingNumber').value.trim();
+      const userCourierName = document.getElementById('userCourierName').value.trim();
       const photosInput = document.getElementById('photos');
 
       if (!activationId) {
@@ -342,6 +378,16 @@
         return;
       }
 
+      if (!userTrackingNumber) {
+        showAlert('Nomor resi pengiriman wajib diisi', 'error');
+        return;
+      }
+
+      if (!userCourierName) {
+        showAlert('Nama kurir wajib diisi', 'error');
+        return;
+      }
+
       showLoading(true);
 
       try {
@@ -351,6 +397,8 @@
         const formData = new FormData();
         formData.append('activationId', activationId);
         formData.append('issueDescription', issueDescription);
+        formData.append('userTrackingNumber', userTrackingNumber);
+        formData.append('userCourierName', userCourierName);
         
         // Append multiple files
         if (photosInput.files.length > 0) {
