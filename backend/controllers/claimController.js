@@ -17,9 +17,9 @@ exports.submitClaim = async (req, res) => {
       return res.status(400).json({ error: 'Activation ID dan deskripsi masalah wajib diisi' });
     }
 
-    // Validate tracking number if provided
-    if (!userTrackingNumber || !userCourierName) {
-      return res.status(400).json({ error: 'Nomor resi dan nama kurir wajib diisi' });
+    // Validate tracking number
+    if (!userTrackingNumber) {
+      return res.status(400).json({ error: 'Nomor resi pengiriman wajib diisi' });
     }
 
     const sanitizedDescription = sanitizeInput(issueDescription);

@@ -68,13 +68,12 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Nama Kurir *</label>
+              <label class="form-label">Nama Kurir</label>
               <input 
                 type="text" 
                 id="userCourierName" 
                 class="form-input" 
                 placeholder="Contoh: JNE, J&T, SiCepat, dll"
-                required
               >
             </div>
 
@@ -380,11 +379,6 @@
 
       if (!userTrackingNumber) {
         showAlert('Nomor resi pengiriman wajib diisi', 'error');
-        return;
-      }
-
-      if (!userCourierName) {
-        showAlert('Nama kurir wajib diisi', 'error');
         return;
       }
 
