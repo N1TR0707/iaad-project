@@ -136,6 +136,18 @@ body {
   background: #e64a19;
 }
 
+.btn-warning {
+  background: var(--warning);
+  color: white;
+  font-weight: 600;
+}
+
+.btn-warning:hover {
+  background: #f57c00;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 .btn-outline {
   background: transparent;
   color: white;
