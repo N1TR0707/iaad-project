@@ -464,3 +464,75 @@ exports.exportClaims = async (req, res) => {
     res.status(500).json({ error: 'Gagal export data klaim' });
   }
 };
+
+// Delete user
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting yourself
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: 'Tidak dapat menghapus akun sendiri' });
+    }
+
+    // Check if user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak ditemukan' });
+    }
+
+    // Delete user
+    await User.delete(id);
+
+    res.json({ 
+      message: 'User berhasil dihapus',
+      deletedUser: {
+        id: user.id,
+        nama: user.nama,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Gagal menghapus user' });
+  }
+};
+
+// Update user
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nama, email, role } = req.body;
+
+    // Validate input
+    if (!nama || !email) {
+      return res.status(400).json({ error: 'Nama dan email wajib diisi' });
+    }
+
+    // Check if user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak ditemukan' });
+    }
+
+    // Prevent changing role of yourself
+    if (parseInt(id) === req.user.id && role && role !== user.role) {
+      return res.status(400).json({ error: 'Tidak dapat mengubah role sendiri' });
+    }
+
+    // Update user
+    const updated = await User.update(id, {
+      nama: sanitizeInput(nama),
+      email: sanitizeInput(email),
+      role: role || user.role
+    });
+
+    res.json({
+      message: 'User berhasil diupdate',
+      user: updated
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Gagal update user' });
+  }
+};

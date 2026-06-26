@@ -1,0 +1,22 @@
+# ========================================
+# Commands untuk Push ke GitHub
+# Copy-paste satu per satu ke PowerShell/CMD
+# ========================================
+
+# 1. Masuk ke folder project
+cd D:\AI\Aktivasi
+
+# 2. Set branch name ke main
+git branch -M main
+
+# 3. Tambahkan remote GitHub
+git remote add origin https://github.com/N1TR0707/iaad-project.git
+
+# 4. Push ke GitHub
+git push -u origin main
+
+# ========================================
+# Ketika diminta login:
+# Username: N1TR0707
+# Password: [Paste Personal Access Token]
+# ========================================

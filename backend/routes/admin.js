@@ -30,6 +30,8 @@ router.get('/activations/export', adminController.exportActivations);
 
 // User Management
 router.get('/users', adminController.getAllUsers);
+router.put('/users/:id', adminController.updateUser);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Warranty Claims Management
 router.get('/claims', adminController.getAllClaims);

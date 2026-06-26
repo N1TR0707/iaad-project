@@ -32,12 +32,24 @@ class User {
   }
 
   static async getAll() {
-    return await db.all('SELECT id, email, nama, telepon, created_at FROM users ORDER BY created_at DESC');
+    return await db.all('SELECT id, email, nama, telepon, role, created_at FROM users ORDER BY created_at DESC');
   }
 
   static async getStats() {
     const result = await db.get('SELECT COUNT(*) as total FROM users');
     return result.total;
+  }
+
+  static async delete(id) {
+    return await db.run('DELETE FROM users WHERE id = ?', [id]);
+  }
+
+  static async update(id, { nama, email, role }) {
+    await db.run(
+      'UPDATE users SET nama = ?, email = ?, role = ? WHERE id = ?',
+      [nama, email, role, id]
+    );
+    return await this.findById(id);
   }
 }
 
