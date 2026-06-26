@@ -41,6 +41,10 @@ class User {
   }
 
   static async delete(id) {
+    // First delete all activations (peripherals) for this user
+    await db.run('DELETE FROM activations WHERE user_id = ?', [id]);
+    
+    // Then delete the user
     return await db.run('DELETE FROM users WHERE id = ?', [id]);
   }
 
