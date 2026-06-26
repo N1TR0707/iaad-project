@@ -15,8 +15,8 @@ async function resetAdminPassword() {
     
     // Update password user admin
     db.run(
-      'UPDATE users SET password = ? WHERE username = ? OR role = ?',
-      [hashedPassword, 'admin', 'admin'],
+      'UPDATE users SET password_hash = ? WHERE email = ? OR role = ?',
+      [hashedPassword, 'admin@iaad.store', 'admin'],
       function(err) {
         if (err) {
           console.error('❌ Error:', err.message);
@@ -37,8 +37,8 @@ async function resetAdminPassword() {
           
           // Buat user admin baru
           db.run(
-            'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, datetime("now"))',
-            ['admin', 'admin@iaad.store', hashedPassword, 'admin'],
+            'INSERT INTO users (email, password_hash, nama, telepon, role, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))',
+            ['admin@iaad.store', hashedPassword, 'Administrator', '', 'admin'],
             function(err) {
               if (err) {
                 console.error('❌ Error:', err.message);
