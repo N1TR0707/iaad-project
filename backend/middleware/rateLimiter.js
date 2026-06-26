@@ -7,7 +7,6 @@ const loginLimiter = rateLimit({
   message: { error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { trustProxy: false },
 });
 
 // Rate limiter for registration (max 3 registrations per hour per IP)
@@ -17,7 +16,6 @@ const registerLimiter = rateLimit({
   message: { error: 'Terlalu banyak registrasi. Coba lagi dalam 1 jam.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { trustProxy: false },
 });
 
 // Rate limiter for activation (max 5 activations per day per IP)
@@ -27,7 +25,6 @@ const activationLimiter = rateLimit({
   message: { error: 'Terlalu banyak percobaan aktivasi. Coba lagi besok.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { trustProxy: false },
 });
 
 // Rate limiter for serial generation (admin only, max 50 generations per hour)
@@ -37,7 +34,6 @@ const serialGenerationLimiter = rateLimit({
   message: { error: 'Terlalu banyak generate serial. Coba lagi dalam 1 jam.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { trustProxy: false },
 });
 
 // General API rate limiter (max 100 requests per 15 minutes)
@@ -47,7 +43,6 @@ const apiLimiter = rateLimit({
   message: { error: 'Terlalu banyak request. Coba lagi nanti.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { trustProxy: false },
 });
 
 module.exports = {
