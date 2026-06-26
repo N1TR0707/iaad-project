@@ -1,14 +1,10 @@
-const mysql = require('mysql2/promise');
+const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
-require('dotenv').config();
+const path = require('path');
 
 async function resetAdminPassword() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'aktivasi_db'
-  });
+  const dbPath = path.join(__dirname, '..', 'database.db');
+  const db = new sqlite3.Database(dbPath);
 
   try {
     console.log('🔄 Resetting admin password...');
@@ -18,36 +14,49 @@ async function resetAdminPassword() {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Update password user admin
-    const [result] = await connection.execute(
+    db.run(
       'UPDATE users SET password = ? WHERE username = ? OR role = ?',
-      [hashedPassword, 'admin', 'admin']
+      [hashedPassword, 'admin', 'admin'],
+      function(err) {
+        if (err) {
+          console.error('❌ Error:', err.message);
+          db.close();
+          return;
+        }
+        
+        if (this.changes > 0) {
+          console.log('✅ Password admin berhasil direset!');
+          console.log('📝 Username: admin');
+          console.log('📝 Password: admin123');
+          console.log('');
+          console.log('⚠️  JANGAN LUPA ubah password setelah login!');
+          db.close();
+        } else {
+          console.log('❌ User admin tidak ditemukan!');
+          console.log('🔄 Membuat user admin baru...');
+          
+          // Buat user admin baru
+          db.run(
+            'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, datetime("now"))',
+            ['admin', 'admin@iaad.store', hashedPassword, 'admin'],
+            function(err) {
+              if (err) {
+                console.error('❌ Error:', err.message);
+              } else {
+                console.log('✅ User admin baru berhasil dibuat!');
+                console.log('📝 Username: admin');
+                console.log('📝 Password: admin123');
+              }
+              db.close();
+            }
+          );
+        }
+      }
     );
-    
-    if (result.affectedRows > 0) {
-      console.log('✅ Password admin berhasil direset!');
-      console.log('📝 Username: admin');
-      console.log('📝 Password: admin123');
-      console.log('');
-      console.log('⚠️  JANGAN LUPA ubah password setelah login!');
-    } else {
-      console.log('❌ User admin tidak ditemukan!');
-      console.log('🔄 Membuat user admin baru...');
-      
-      // Buat user admin baru
-      await connection.execute(
-        'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, NOW())',
-        ['admin', 'admin@iaad.store', hashedPassword, 'admin']
-      );
-      
-      console.log('✅ User admin baru berhasil dibuat!');
-      console.log('📝 Username: admin');
-      console.log('📝 Password: admin123');
-    }
     
   } catch (error) {
     console.error('❌ Error:', error.message);
-  } finally {
-    await connection.end();
+    db.close();
   }
 }
 
