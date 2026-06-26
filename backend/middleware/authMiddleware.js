@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Admin = require('../models/Admin');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -66,16 +65,23 @@ const authenticateAdmin = async (req, res, next) => {
         return res.status(403).json({ error: 'Admin access required' });
       }
 
-      const admin = await Admin.findById(decoded.adminId);
+      // Use User model and check role instead of Admin model
+      const user = await User.findById(decoded.adminId || decoded.userId);
       
-      if (!admin) {
+      if (!user) {
         return res.status(401).json({ error: 'Admin not found' });
       }
 
+      // Verify user has admin role
+      if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
       req.admin = {
-        id: admin.id,
-        username: admin.username,
-        role: admin.role
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role
       };
       
       next();
