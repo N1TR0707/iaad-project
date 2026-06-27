@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { authenticateAdmin, authenticateAdminExport } = require('../middleware/authMiddleware');
 const { serialGenerationLimiter } = require('../middleware/rateLimiter');
 
-// All admin routes require admin authentication
+// Export routes with query token support (must be before router.use)
+router.get('/activations/export', authenticateAdminExport, adminController.exportActivations);
+router.get('/serials/export/:productId', authenticateAdminExport, adminController.exportSerials);
+router.get('/claims/export', authenticateAdminExport, adminController.exportClaims);
+
+// All other admin routes require admin authentication
 router.use(authenticateAdmin);
 
 // Dashboard & Statistics
@@ -22,11 +27,9 @@ router.get('/serials', adminController.getAllSerials);
 router.get('/serials/product/:productId', adminController.getProductSerials);
 router.delete('/serials/:id', adminController.deleteSerial);
 router.put('/serials/:id/status', adminController.updateSerialStatus);
-router.get('/serials/export/:productId', adminController.exportSerials);
 
 // Activation Management
 router.get('/activations', adminController.getAllActivations);
-router.get('/activations/export', adminController.exportActivations);
 
 // User Management
 router.get('/users', adminController.getAllUsers);
@@ -37,6 +40,5 @@ router.delete('/users/:id', adminController.deleteUser);
 router.get('/claims', adminController.getAllClaims);
 router.get('/claims/:id', adminController.getClaimById);
 router.put('/claims/:id/status', adminController.updateClaimStatus);
-router.get('/claims/export', adminController.exportClaims);
 
 module.exports = router;
