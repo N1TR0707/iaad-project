@@ -31,11 +31,6 @@ router.put('/serials/:id/status', adminController.updateSerialStatus);
 // Activation Management
 router.get('/activations', adminController.getAllActivations);
 
-// User Management
-router.get('/users', adminController.getAllUsers);
-router.put('/users/:id', adminController.updateUser);
-router.delete('/users/:id', adminController.deleteUser);
-
 // Warranty Claims Management
 router.get('/claims', adminController.getAllClaims);
 router.get('/claims/:id', adminController.getClaimById);
